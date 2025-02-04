@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
-import { Accelerometer } from 'expo-sensors';
+import { Gyroscope } from 'expo-sensors';
 import { Audio } from 'expo-av';
 
 const App = () => {
@@ -25,12 +25,12 @@ const App = () => {
         };
     }, []);
 
-    // Detect shake using accelerometer
+    // Detect shake using
     useEffect(() => {
         const threshold = 1.5; // Adjust sensitivity
         let lastX, lastY, lastZ;
 
-        const subscription = Accelerometer.addListener(({ x, y, z }) => {
+        const subscription = Gyroscope.addListener(({ x, y, z }) => {
             if (lastX !== undefined && lastY !== undefined && lastZ !== undefined) {
                 const deltaX = Math.abs(x - lastX);
                 const deltaY = Math.abs(y - lastY);
@@ -50,7 +50,7 @@ const App = () => {
             lastZ = z;
         });
 
-        Accelerometer.setUpdateInterval(100); // Update interval in milliseconds
+        Gyroscope.setUpdateInterval(100); // Update interval in milliseconds
 
         return () => subscription.remove();
     }, [sound]);
