@@ -1,94 +1,58 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, StyleSheet } from 'react-native';
-import { Gyroscope } from 'expo-sensors';
+import { StatusBar, StyleSheet, Text, View } from 'react-native';
+import { Accelerometer } from 'expo-sensors';
 import { Audio } from 'expo-av';
-
-const App = () => {
-    const [isShaking, setIsShaking] = useState(false);
-    const [sound, setSound] = useState(null);
-
-    // Load the sound effect
-    useEffect(() => {
-        const loadSound = async () => {
-            const { sound } = await Audio.Sound.createAsync(
-                require('./short1.wav') // Replace with your sound file
-            );
-            setSound(sound);
-        };
-
-        loadSound();
-
-        return () => {
-            if (sound) {
-                sound.unloadAsync();
-            }
-        };
-    }, []);
-
-    // Detect shake using
-    useEffect(() => {
-        const threshold = 1.5; // Adjust sensitivity
-        let lastX, lastY, lastZ;
-
-        const subscription = Gyroscope.addListener(({ x, y, z }) => {
-            if (lastX !== undefined && lastY !== undefined && lastZ !== undefined) {
-                const deltaX = Math.abs(x - lastX);
-                const deltaY = Math.abs(y - lastY);
-                const deltaZ = Math.abs(z - lastZ);
-
-                if (deltaX + deltaY + deltaZ > threshold) {
-                    setIsShaking(true);
-                    playSound();
-
-                    // Reset shake state after a short delay
-                    setTimeout(() => setIsShaking(false), 500);
-                }
-            }
-
-            lastX = x;
-            lastY = y;
-            lastZ = z;
-        });
-
-        Gyroscope.setUpdateInterval(100); // Update interval in milliseconds
-
-        return () => subscription.remove();
-    }, [sound]);
-
-    // Play the sound effect
-    const playSound = async () => {
-        if (sound) {
-            await sound.replayAsync();
-        }
-    };
-
-    return (
-        <View style={styles.container}>
-            {isShaking ? (
-                <Text style={styles.shakeText}>SHAKE</Text>
-            ) : (
-                <Text style={styles.emptyText}></Text>
-            )}
-        </View>
-    );
-};
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#000',
+        backgroundColor: '#fff',
     },
-    shakeText: {
-        fontSize: 48,
+    text: {
+        fontSize: 40,
         fontWeight: 'bold',
-        color: '#fff',
-    },
-    emptyText: {
-        fontSize: 24,
-        color: '#000',
     },
 });
 
-export default App;
+export default function App() {
+    const [isShaking, setIsShaking] = useState(false);
+    const [sound, setSound] = useState();
+
+    async function playSound() {
+        try {
+            const { sound } = await Audio.Sound.createAsync(require('./short1.wav.wav'));
+            setSound(sound);
+            await sound.playAsync();
+        } catch (error) {
+            console.error('Error playing sound:', error);
+        }
+    }
+
+    useEffect(() => {
+        Accelerometer.setUpdateInterval(100);
+        const subscription = Accelerometer.addListener(({ x, y, z }) => {
+            const acceleration = Math.sqrt(x * x + y * y + z * z);
+            if (acceleration > 1.5) {
+                setIsShaking(true);
+                playSound();
+            } else {
+                setIsShaking(false);
+            }
+        });
+
+        return () => subscription.remove();
+    }, []);
+
+    useEffect(() => {
+        return sound ? () => sound.unloadAsync() : undefined;
+    }, [sound]);
+
+    return (
+        <View style={styles.container}>
+            <StatusBar />
+            {isShaking && <Text style={styles.text}>SHAKE</Text>}
+        </View>
+    );
+}
